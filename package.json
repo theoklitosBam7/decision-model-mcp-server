@@ -1,0 +1,40 @@
+{
+  "name": "decision-model-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Provider-neutral MCP server for classifier and decision models such as Jev and Ollama decision models.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "inspect": "pnx @modelcontextprotocol/inspector --protocol-era auto pnx tsx src/index.ts",
+    "lint:check": "oxlint --deny-warnings",
+    "lint": "oxlint --fix",
+    "fmt:check": "oxfmt --check",
+    "fmt": "oxfmt"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.2.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.0",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "oxlint-tsgolint": "^7.0.2003",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.8.1",
+      "onFail": "download"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
