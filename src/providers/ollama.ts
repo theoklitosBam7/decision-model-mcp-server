@@ -1,15 +1,9 @@
 import { postJson } from "../http.js";
-import type { DecisionProvider, DecisionRequest, DecisionResponse, JsonValue } from "../types.js";
+import { validateDecisionResponse } from "../response.js";
+import type { DecisionProvider, DecisionRequest, DecisionResponse } from "../types.js";
 
 const DEFAULT_BASE_URL = "http://127.0.0.1:11434";
 const DEFAULT_MODEL = "nimble";
-
-function asObject(value: JsonValue): Record<string, JsonValue> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("Ollama returned an unexpected response shape.");
-  }
-  return value;
-}
 
 export class OllamaProvider implements DecisionProvider {
   readonly id = "ollama";
@@ -20,6 +14,7 @@ export class OllamaProvider implements DecisionProvider {
     try {
       const response = await fetch(`${baseUrl}/api/version`, {
         signal: AbortSignal.timeout(2_000),
+        redirect: "error",
       });
       return response.ok
         ? { ok: true }
@@ -48,14 +43,7 @@ export class OllamaProvider implements DecisionProvider {
     const raw = await postJson(this.id, `${baseUrl}/v1/systemone`, payload, {
       timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : 120_000,
     });
-    const object = asObject(raw);
 
-    return {
-      provider: this.id,
-      model: typeof object.model === "string" ? object.model : model,
-      answers: asObject(object.answers ?? {}),
-      usage: object.usage,
-      raw,
-    };
+    return validateDecisionResponse(this.id, request, raw, model);
   }
 }
