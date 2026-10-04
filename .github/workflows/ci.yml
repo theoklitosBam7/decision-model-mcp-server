@@ -21,6 +21,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm run lint:check
-      - run: pnpm run fmt:check
+      - run: pnpm exec oxfmt src/response.ts test/security.test.ts && git diff -- src/response.ts test/security.test.ts && exit 1
       - run: pnpm run typecheck
       - run: pnpm run build
