@@ -39,7 +39,6 @@ export interface DecisionResponse {
   model?: string;
   answers: Record<string, JsonValue>;
   usage?: JsonValue;
-  raw?: JsonValue;
 }
 
 export interface DecisionProvider {
