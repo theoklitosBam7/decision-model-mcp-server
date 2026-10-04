@@ -16,6 +16,9 @@ export function resolveJevBaseUrl(): string {
   if (url.username || url.password) {
     throw new Error("JEV_API_BASE_URL must not contain embedded credentials.");
   }
+  if (url.search || url.hash) {
+    throw new Error("JEV_API_BASE_URL must not contain a query string or fragment.");
+  }
 
   const allowInsecure = process.env.JEV_ALLOW_INSECURE_HTTP === "true";
   if (url.protocol !== "https:" && !(allowInsecure && url.protocol === "http:")) {
