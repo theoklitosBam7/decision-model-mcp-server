@@ -193,9 +193,14 @@ void test("postJson enforces a response byte limit", async () => {
   try {
     await assert.rejects(
       () =>
-        postJson("test", "https://example.invalid", {}, {
-          maxResponseBytes: 16,
-        }),
+        postJson(
+          "test",
+          "https://example.invalid",
+          {},
+          {
+            maxResponseBytes: 16,
+          },
+        ),
       /response exceeded 16 bytes/i,
     );
   } finally {
