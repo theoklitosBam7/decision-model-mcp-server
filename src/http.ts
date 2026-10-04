@@ -59,6 +59,12 @@ export async function postJson(
   const maxRequestBytes = options.maxRequestBytes ?? DEFAULT_MAX_BODY_BYTES;
   const maxResponseBytes = options.maxResponseBytes ?? DEFAULT_MAX_BODY_BYTES;
   const body = JSON.stringify(payload);
+  if (body === undefined) {
+    throw new DecisionProviderError(
+      `${provider} request could not be serialized as JSON.`,
+      provider,
+    );
+  }
   const bodyBytes = Buffer.byteLength(body);
 
   if (bodyBytes > maxRequestBytes) {
