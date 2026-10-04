@@ -1,9 +1,4 @@
-import type {
-  DecisionQuestion,
-  DecisionRequest,
-  DecisionResponse,
-  JsonValue,
-} from "./types.js";
+import type { DecisionQuestion, DecisionRequest, DecisionResponse, JsonValue } from "./types.js";
 
 function asObject(value: JsonValue | undefined, message: string): Record<string, JsonValue> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -49,9 +44,7 @@ function validateAnswer(name: string, question: DecisionQuestion, value: JsonVal
       throw new Error(`${name}.choice must be a string.`);
     }
     if (!Object.hasOwn(question.criteria, answer.choice)) {
-      throw new Error(
-        `${name}.choice '${answer.choice}' is not one of the requested criteria.`,
-      );
+      throw new Error(`${name}.choice '${answer.choice}' is not one of the requested criteria.`);
     }
   }
 
@@ -76,9 +69,7 @@ export function validateDecisionResponse(
     expectedKeys.length !== actualKeys.length ||
     expectedKeys.some((key, index) => key !== actualKeys[index])
   ) {
-    throw new Error(
-      `${provider} response answer keys do not match the requested questions.`,
-    );
+    throw new Error(`${provider} response answer keys do not match the requested questions.`);
   }
 
   const validated: Record<string, JsonValue> = {};
