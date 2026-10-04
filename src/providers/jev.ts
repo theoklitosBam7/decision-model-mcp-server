@@ -1,13 +1,30 @@
 import { postJson } from "../http.js";
-import type { DecisionProvider, DecisionRequest, DecisionResponse, JsonValue } from "../types.js";
+import { validateDecisionResponse } from "../response.js";
+import type { DecisionProvider, DecisionRequest, DecisionResponse } from "../types.js";
 
 const DEFAULT_BASE_URL = "https://jevtypesafe.org/api/v1";
 
-function asObject(value: JsonValue): Record<string, JsonValue> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("Jev returned an unexpected response shape.");
+export function resolveJevBaseUrl(): string {
+  const configured = process.env.JEV_API_BASE_URL ?? DEFAULT_BASE_URL;
+  let url: URL;
+  try {
+    url = new URL(configured);
+  } catch {
+    throw new Error("JEV_API_BASE_URL must be a valid absolute URL.");
   }
-  return value;
+
+  if (url.username || url.password) {
+    throw new Error("JEV_API_BASE_URL must not contain embedded credentials.");
+  }
+
+  const allowInsecure = process.env.JEV_ALLOW_INSECURE_HTTP === "true";
+  if (url.protocol !== "https:" && !(allowInsecure && url.protocol === "http:")) {
+    throw new Error(
+      "JEV_API_BASE_URL must use HTTPS. Set JEV_ALLOW_INSECURE_HTTP=true only for a trusted development endpoint.",
+    );
+  }
+
+  return url.toString().replace(/\/$/, "");
 }
 
 export class JevProvider implements DecisionProvider {
@@ -15,16 +32,26 @@ export class JevProvider implements DecisionProvider {
   readonly description = "Hosted TypeSafe Jev decision API";
 
   async available() {
-    return process.env.JEV_API_KEY
-      ? { ok: true }
-      : { ok: false, detail: "JEV_API_KEY is not configured." };
+    if (!process.env.JEV_API_KEY) {
+      return { ok: false, detail: "JEV_API_KEY is not configured." };
+    }
+
+    try {
+      resolveJevBaseUrl();
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        detail: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   async decide(request: DecisionRequest): Promise<DecisionResponse> {
     const apiKey = process.env.JEV_API_KEY;
     if (!apiKey) throw new Error("JEV_API_KEY is not configured.");
 
-    const baseUrl = (process.env.JEV_API_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
+    const baseUrl = resolveJevBaseUrl();
     const timeoutMs = Number(process.env.JEV_TIMEOUT_MS ?? "30000");
 
     const payload: Record<string, unknown> = {
@@ -37,14 +64,7 @@ export class JevProvider implements DecisionProvider {
       headers: { Authorization: `Bearer ${apiKey}` },
       timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : 30_000,
     });
-    const object = asObject(raw);
 
-    return {
-      provider: this.id,
-      model: typeof object.model === "string" ? object.model : request.model,
-      answers: asObject(object.answers ?? {}),
-      usage: object.usage,
-      raw,
-    };
+    return validateDecisionResponse(this.id, request, raw, request.model);
   }
 }
