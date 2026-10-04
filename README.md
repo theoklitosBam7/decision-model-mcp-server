@@ -2,7 +2,7 @@
 
 A provider-neutral MCP server for classifier and decision models.
 
-The server exposes the same MCP tools across providers. Set a default with `DECISION_PROVIDER`, or override the provider and model on each model-facing call.
+The server exposes the same MCP tools across providers. Set a default with `DECISION_PROVIDER`. Per-call provider overrides are accepted only for providers listed in `DECISION_ALLOWED_PROVIDERS`; when that variable is omitted, only the default provider is allowed.
 
 ## Built-in providers
 
@@ -18,10 +18,10 @@ To add a provider, implement `DecisionProvider` in `src/providers/` and register
 - `decision_boolean` makes a yes/no judgement with a `noul` question.
 - `decision_score` places state on an ordered rubric.
 - `decision_batch` runs the same questions across several states.
-- `decision_gate` applies a local `allow | review | block` policy to answers without another model call.
+- `decision_gate` applies a local advisory `allow | review | block` policy to caller-supplied answers without another model call. Missing or malformed policy inputs return `review`. Because callers supply the answers, do not use this tool alone as an authorization boundary.
 - `decision_providers` lists providers and checks basic availability.
 
-Model-facing tools accept optional `provider` and `model` parameters.
+Model-facing tools accept optional `provider` and `model` parameters. Set `DECISION_ALLOWED_PROVIDERS` to a comma-separated allowlist when per-call provider switching is required.
 
 ## Requirements
 
@@ -62,7 +62,7 @@ pnpm run dev
 
 The provider availability check confirms that Ollama responds. It does not check whether the selected model is installed.
 
-You can override the provider or model in each model-facing MCP call:
+You can override the model in each model-facing MCP call. To allow provider overrides, list each permitted provider first, for example `export DECISION_ALLOWED_PROVIDERS=ollama,jev`:
 
 ```json
 {
@@ -86,7 +86,7 @@ export JEV_API_KEY=jv_live_...
 pnpm run dev
 ```
 
-Or leave Ollama as the default and request Jev for one call with `"provider": "jev"`.
+To leave Ollama as the default and request Jev for one call, set `DECISION_ALLOWED_PROVIDERS=ollama,jev` and then use `"provider": "jev"`. Jev endpoints must use HTTPS. Plain HTTP requires the explicit development-only setting `JEV_ALLOW_INSECURE_HTTP=true`.
 
 ## Generic decision request
 
@@ -160,7 +160,7 @@ To load a local `.env` file instead of listing settings under `env`, copy `.env.
 }
 ```
 
-Node.js 20.6.0 and later supports `--env-file`. The project ignores `.env` in Git.
+Node.js 20.6.0 and later supports `--env-file`. The project ignores `.env` in Git. Model request and provider response bodies are limited to 1 MiB, and provider redirects are rejected.
 
 ## Architecture
 
