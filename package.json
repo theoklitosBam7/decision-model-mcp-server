@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "test": "tsx --test test/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "inspect": "pnx @modelcontextprotocol/inspector --protocol-era auto pnx tsx src/index.ts",
+    "inspect": "pnx @modelcontextprotocol/inspector@2.9.0 --protocol-era auto pnpm exec tsx src/index.ts",
     "lint:check": "oxlint --deny-warnings",
     "lint": "oxlint --fix",
     "fmt:check": "oxfmt --check",
