@@ -7,8 +7,10 @@ const MAX_RECORD_KEYS = 100;
 const MAX_QUESTIONS = 50;
 const MAX_PAYLOAD_BYTES = 1_048_576;
 
-const withinPayloadLimit = (value: unknown) =>
-  Buffer.byteLength(JSON.stringify(value)) <= MAX_PAYLOAD_BYTES;
+const withinPayloadLimit = (value: unknown) => {
+  const serialized = JSON.stringify(value);
+  return serialized !== undefined && Buffer.byteLength(serialized) <= MAX_PAYLOAD_BYTES;
+};
 
 export const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
   z.union([
