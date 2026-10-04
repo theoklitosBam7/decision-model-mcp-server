@@ -36,7 +36,7 @@ function withEnv(
   }
 }
 
-test("gate does not allow when a policy references a missing answer", () => {
+void test("gate does not allow when a policy references a missing answer", () => {
   assert.deepEqual(
     gate(
       {},
@@ -53,7 +53,7 @@ test("gate does not allow when a policy references a missing answer", () => {
   );
 });
 
-test("gate does not allow malformed answer fields", () => {
+void test("gate does not allow malformed answer fields", () => {
   assert.deepEqual(
     gate(
       { risk: { type: "noul", noul: "not-a-number" } },
@@ -70,7 +70,7 @@ test("gate does not allow malformed answer fields", () => {
   );
 });
 
-test("provider override is denied unless it is explicitly allowed", () =>
+void test("provider override is denied unless it is explicitly allowed", () =>
   withEnv(
     {
       DECISION_PROVIDER: "ollama",
@@ -82,7 +82,7 @@ test("provider override is denied unless it is explicitly allowed", () =>
     },
   ));
 
-test("provider override can be enabled with DECISION_ALLOWED_PROVIDERS", () =>
+void test("provider override can be enabled with DECISION_ALLOWED_PROVIDERS", () =>
   withEnv(
     {
       DECISION_PROVIDER: "ollama",
@@ -93,7 +93,7 @@ test("provider override can be enabled with DECISION_ALLOWED_PROVIDERS", () =>
     },
   ));
 
-test("Jev rejects insecure HTTP endpoints by default", () =>
+void test("Jev rejects insecure HTTP endpoints by default", () =>
   withEnv(
     {
       JEV_API_BASE_URL: "http://example.invalid/api/v1",
@@ -104,7 +104,7 @@ test("Jev rejects insecure HTTP endpoints by default", () =>
     },
   ));
 
-test("Jev permits explicit insecure HTTP only when opted in", () =>
+void test("Jev permits explicit insecure HTTP only when opted in", () =>
   withEnv(
     {
       JEV_API_BASE_URL: "http://127.0.0.1:9000/api/v1/",
@@ -115,7 +115,7 @@ test("Jev permits explicit insecure HTTP only when opted in", () =>
     },
   ));
 
-test("provider response validation rejects missing and unexpected answers", () => {
+void test("provider response validation rejects missing and unexpected answers", () => {
   const request: DecisionRequest = {
     state: "ticket",
     questions: {
@@ -149,7 +149,7 @@ test("provider response validation rejects missing and unexpected answers", () =
   );
 });
 
-test("provider response validation rejects an out-of-policy choice", () => {
+void test("provider response validation rejects an out-of-policy choice", () => {
   const request: DecisionRequest = {
     state: "ticket",
     questions: {
@@ -182,7 +182,7 @@ test("provider response validation rejects an out-of-policy choice", () => {
   );
 });
 
-test("postJson enforces a response byte limit", async () => {
+void test("postJson enforces a response byte limit", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () =>
     new Response("x".repeat(32), {
