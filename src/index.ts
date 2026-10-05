@@ -1,9 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
+import { codexPreToolUseOutput, evaluateActionPolicy } from "./action-policy.js";
 import { batchDecide, decide, gate } from "./decision.js";
 import { listProviders } from "./providers/index.js";
 import type { JsonValue } from "./types.js";
 import {
+  actionPolicyInputSchema,
   batchInputSchema,
   booleanInputSchema,
   classifyInputSchema,
@@ -140,6 +142,29 @@ function createServer(): McpServer {
     async ({ answers, policy }) => {
       try {
         return ok(gate(answers as Record<string, JsonValue>, policy));
+      } catch (error) {
+        return fail(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "decision_action_policy",
+    {
+      description:
+        "Evaluate a proposed engineering tool call with the decision model, apply the built-in advisory action policy, and return allow, review, or block. Use output=codex_pre_tool_use when called from a Codex PreToolUse MCP hook.",
+      inputSchema: actionPolicyInputSchema,
+    },
+    async ({ tool_name, tool_input, scope, output, provider, model }) => {
+      try {
+        const result = await evaluateActionPolicy({
+          toolName: tool_name,
+          toolInput: tool_input as JsonValue,
+          scope,
+          provider,
+          model,
+        });
+        return ok(output === "codex_pre_tool_use" ? codexPreToolUseOutput(result) : result);
       } catch (error) {
         return fail(error);
       }
