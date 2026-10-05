@@ -31,7 +31,7 @@ Merge `integrations/codex/hooks.json` into the hooks configuration you use for C
 
 The hook is an `mcp_tool` hook. It passes the current `tool_name` and typed `tool_input` to `decision_action_policy`.
 
-The matcher excludes the `decision-models` server itself so the policy tool does not recursively evaluate its own call.
+The matcher covers Codex shell and file-edit paths (`Bash`, `apply_patch`, and the `Edit`/`Write` aliases). It does not match MCP tool calls, so the policy hook cannot recursively evaluate its own MCP invocation. Add separate explicit matcher groups for other tool families you want to gate.
 
 ### Result behavior
 
