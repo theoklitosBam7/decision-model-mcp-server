@@ -19,10 +19,7 @@ type ToolCallContext = {
 type PiExtensionApi = {
   on(
     event: "tool_call",
-    handler: (
-      event: ToolCallEvent,
-      ctx: ToolCallContext,
-    ) => Promise<ToolCallEventResult | void>,
+    handler: (event: ToolCallEvent, ctx: ToolCallContext) => Promise<ToolCallEventResult | void>,
   ): void;
 };
 
