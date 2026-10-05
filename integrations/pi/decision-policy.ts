@@ -3,43 +3,18 @@ import type {
   ToolCallEventResult,
 } from "@earendil-works/pi-coding-agent";
 
-const POLICY_TOOL = "mcp__decision_models__decision_action_policy";
-
-function resultText(content: Array<{ type: string; text?: string }>): string {
-  return content
-    .filter((item) => item.type === "text" && typeof item.text === "string")
-    .map((item) => item.text)
-    .join("\n");
-}
+import { evaluateActionPolicy, isDecisionModelTool } from "../../dist/action-policy.js";
 
 export default function decisionPolicy(pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx): Promise<ToolCallEventResult | void> => {
-    if (event.toolName.startsWith("mcp__decision_models__")) return;
+    if (isDecisionModelTool(event.toolName)) return;
 
-    let result: {
-      action: "allow" | "review" | "block";
-      reasons: string[];
-      evaluated: boolean;
-    };
-
+    let result;
     try {
-      const outcome = await ctx.executeTool(
-        POLICY_TOOL,
-        {
-          tool_name: event.toolName,
-          tool_input: event.input,
-          scope: "consequential",
-          output: "result",
-        },
-        { signal: ctx.signal },
-      );
-
-      const text = resultText(outcome.result.content);
-      if (outcome.isError) {
-        throw new Error(text || "decision_action_policy returned an error");
-      }
-
-      result = JSON.parse(text) as typeof result;
+      result = await evaluateActionPolicy({
+        toolName: event.toolName,
+        toolInput: event.input,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (ctx.hasUI) {
