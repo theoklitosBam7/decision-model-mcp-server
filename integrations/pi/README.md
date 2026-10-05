@@ -27,7 +27,7 @@ From this repository:
 
 ```bash
 pi mcp add decision-models \
-  --exposure direct \
+  --exposure codemode \
   --description "Structured engineering decisions and action policy" \
   -- node "$PWD/dist/index.js"
 
@@ -46,8 +46,8 @@ pi --extension ./integrations/pi/decision-policy.ts
 
 For regular use, copy or link `decision-policy.ts` into a trusted Pi extension directory.
 
-The extension listens to Pi's `tool_call` event and calls `mcp__decision_models__decision_action_policy` through Pi's `ctx.executeTool()` API. The `direct` exposure above makes Pi wait for the server before the first prompt and keeps the policy tool callable. It evaluates only consequential actions by default. A model result of `block` blocks the call. A result of `review` opens Pi's confirmation UI. In non-UI sessions, `review` blocks because no human confirmation is available.
+The extension listens to Pi's `tool_call` event and evaluates only consequential actions by default. Pi v1.0.3 gives lifecycle handlers an `ExtensionContext`; nested `ctx.executeTool()` is available only to tool execution contexts. To avoid an unsupported re-entrant MCP call from `tool_call`, the interceptor imports the same built `dist/action-policy.js` core that backs the MCP tool. A model result of `block` blocks the call. A result of `review` opens Pi's confirmation UI. In non-UI sessions, `review` blocks because no human confirmation is available.
 
 Provider failures fail open to Pi's normal permission behavior so a local model outage does not make the coding agent unusable.
 
-Nested MCP calls pass through Pi's normal tool pipeline. The extension skips calls whose name starts with `mcp__decision_models__` to prevent recursive policy evaluation.
+The MCP server remains available to Pi for agent-driven routing and decision calls. The interceptor skips the decision server's own tool names to avoid redundant evaluation. Rerun `pnpm run build` after changing the shared policy implementation.
