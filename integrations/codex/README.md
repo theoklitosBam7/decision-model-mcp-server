@@ -1,5 +1,7 @@
 # Codex CLI integration
 
+Compatibility target: Codex CLI 0.160.1, the latest stable release on October 5, 2026.
+
 This integration uses the current Codex MCP and lifecycle-hook interfaces.
 
 ## 1. Build the server
