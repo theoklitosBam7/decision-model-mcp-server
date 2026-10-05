@@ -19,6 +19,7 @@ To add a provider, implement `DecisionProvider` in `src/providers/` and register
 - `decision_score` places state on an ordered rubric.
 - `decision_batch` runs the same questions across several states.
 - `decision_gate` applies a local advisory `allow | review | block` policy to caller-supplied answers without another model call. Missing or malformed policy inputs return `review`. Because callers supply the answers, do not use this tool alone as an authorization boundary.
+- `decision_action_policy` evaluates a proposed engineering tool call, skips routine actions in the default `consequential` scope, and combines model answers with a built-in advisory `allow | review | block` policy. It can emit Codex `PreToolUse` hook output directly.
 - `decision_providers` lists providers and checks basic availability.
 
 Model-facing tools accept optional `provider` and `model` parameters. Set `DECISION_ALLOWED_PROVIDERS` to a comma-separated allowlist when per-call provider switching is required.
@@ -161,6 +162,18 @@ To load a local `.env` file instead of listing settings under `env`, copy `.env.
 ```
 
 Node.js 20.6.0 and later supports `--env-file`. The project ignores `.env` in Git. Model request and provider response bodies are limited to 1 MiB, and provider redirects are rejected.
+
+## Coding-agent integrations
+
+The repository includes integrations for current Codex CLI and Pi releases:
+
+- `integrations/codex/hooks.json` uses a Codex `PreToolUse` `mcp_tool` hook to send supported tool calls to `decision_action_policy`. The hook excludes the decision server itself to prevent recursion.
+- `integrations/pi/decision-policy.ts` uses Pi's `tool_call` extension event. It blocks model-classified `block` actions and asks for confirmation on `review` when UI is available.
+- `.agents/skills/engineering-decisions/SKILL.md` is a portable Agent Skill discovered by current Pi and Codex project skill loading.
+
+See `integrations/codex/README.md` and `integrations/pi/README.md` for setup.
+
+The action policy is deliberately advisory. Keep the host's native permission and sandbox controls enabled.
 
 ## Architecture
 
