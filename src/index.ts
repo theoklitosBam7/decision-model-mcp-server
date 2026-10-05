@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { batchDecide, decide, gate } from "./decision.js";
-import { DecisionProviderError } from "./http.js";
 import { listProviders } from "./providers/index.js";
 import type { JsonValue } from "./types.js";
 import {
@@ -18,12 +17,7 @@ const ok = (value: unknown) => ({
 });
 
 const fail = (error: unknown) => {
-  const message =
-    error instanceof DecisionProviderError
-      ? [error.message, error.body].filter(Boolean).join("\n")
-      : error instanceof Error
-        ? error.message
-        : String(error);
+  const message = error instanceof Error ? error.message : "Unknown decision error.";
   return { content: [{ type: "text" as const, text: message }], isError: true };
 };
 
@@ -140,7 +134,7 @@ function createServer(): McpServer {
     "decision_gate",
     {
       description:
-        "Apply local allow/review/block policy to decision answers. Provider-neutral and does not make another model call.",
+        "Apply a local advisory allow/review/block policy to caller-supplied answers. Missing or malformed policy inputs return review. Do not use this tool alone as an authorization boundary because callers can supply the answers.",
       inputSchema: gateInputSchema,
     },
     async ({ answers, policy }) => {

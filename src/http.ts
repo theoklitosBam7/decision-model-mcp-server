@@ -1,15 +1,46 @@
 import type { JsonValue } from "./types.js";
 
+const DEFAULT_MAX_BODY_BYTES = 1_048_576;
+
 export class DecisionProviderError extends Error {
   constructor(
     message: string,
     public readonly provider: string,
     public readonly status?: number,
-    public readonly body?: string,
   ) {
     super(message);
     this.name = "DecisionProviderError";
   }
+}
+
+async function readLimitedText(
+  provider: string,
+  response: Response,
+  maxBytes: number,
+): Promise<string> {
+  if (!response.body) return "";
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let text = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new DecisionProviderError(
+        `${provider} response exceeded ${maxBytes} bytes.`,
+        provider,
+        response.status,
+      );
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+
+  return text + decoder.decode();
 }
 
 export async function postJson(
@@ -19,10 +50,30 @@ export async function postJson(
   options: {
     headers?: Record<string, string>;
     timeoutMs?: number;
+    maxRequestBytes?: number;
+    maxResponseBytes?: number;
   } = {},
 ): Promise<JsonValue> {
   const controller = new AbortController();
   const timeoutMs = options.timeoutMs ?? 30_000;
+  const maxRequestBytes = options.maxRequestBytes ?? DEFAULT_MAX_BODY_BYTES;
+  const maxResponseBytes = options.maxResponseBytes ?? DEFAULT_MAX_BODY_BYTES;
+  const body = JSON.stringify(payload);
+  if (body === undefined) {
+    throw new DecisionProviderError(
+      `${provider} request could not be serialized as JSON.`,
+      provider,
+    );
+  }
+  const bodyBytes = Buffer.byteLength(body);
+
+  if (bodyBytes > maxRequestBytes) {
+    throw new DecisionProviderError(
+      `${provider} request exceeded ${maxRequestBytes} bytes.`,
+      provider,
+    );
+  }
+
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -33,17 +84,17 @@ export async function postJson(
         Accept: "application/json",
         ...options.headers,
       },
-      body: JSON.stringify(payload),
+      body,
       signal: controller.signal,
+      redirect: "error",
     });
 
-    const raw = await response.text();
+    const raw = await readLimitedText(provider, response, maxResponseBytes);
     if (!response.ok) {
       throw new DecisionProviderError(
         `${provider} request failed with HTTP ${response.status}.`,
         provider,
         response.status,
-        raw.slice(0, 2_000),
       );
     }
 
@@ -54,7 +105,6 @@ export async function postJson(
         `${provider} returned a non-JSON response.`,
         provider,
         response.status,
-        raw.slice(0, 2_000),
       );
     }
   } catch (error) {

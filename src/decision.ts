@@ -43,19 +43,49 @@ export function gate(answers: Answer, policy: GatePolicy = {}) {
     reasons.push(reason);
   };
 
+  const policyNames = new Set([
+    ...Object.keys(policy.noul ?? {}),
+    ...Object.keys(policy.choice ?? {}),
+  ]);
+
+  for (const name of policyNames) {
+    const value = answers[name];
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      if (policy.noul?.[name]) {
+        promote("review", `${name}: required noul answer is missing or invalid`);
+      } else {
+        promote("review", `${name}: required choice answer is missing`);
+      }
+      continue;
+    }
+
+    const answer = value as Record<string, JsonValue>;
+    if (policy.noul?.[name] && typeof answer.noul !== "number") {
+      promote("review", `${name}: required noul answer is missing or invalid`);
+    }
+    if (policy.choice?.[name] && typeof answer.choice !== "string") {
+      promote("review", `${name}: required choice answer is missing`);
+    }
+  }
+
   for (const [name, value] of Object.entries(answers)) {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) continue;
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      if (policy.min_confidence !== undefined) {
+        promote("review", `${name}: confidence is missing or invalid`);
+      }
+      continue;
+    }
     const answer = value as Record<string, JsonValue>;
 
-    if (
-      policy.min_confidence !== undefined &&
-      typeof answer.confidence === "number" &&
-      answer.confidence < policy.min_confidence
-    ) {
-      promote(
-        "review",
-        `${name}: confidence ${answer.confidence} is below ${policy.min_confidence}`,
-      );
+    if (policy.min_confidence !== undefined) {
+      if (typeof answer.confidence !== "number") {
+        promote("review", `${name}: confidence is missing or invalid`);
+      } else if (answer.confidence < policy.min_confidence) {
+        promote(
+          "review",
+          `${name}: confidence ${answer.confidence} is below ${policy.min_confidence}`,
+        );
+      }
     }
 
     const noulPolicy = policy.noul?.[name];
