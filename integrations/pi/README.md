@@ -25,7 +25,7 @@ From this repository:
 
 ```bash
 pi mcp add decision-models \
-  --exposure codemode \
+  --exposure direct \
   --description "Structured engineering decisions and action policy" \
   -- node "$PWD/dist/index.js"
 
@@ -44,8 +44,8 @@ pi --extension ./integrations/pi/decision-policy.ts
 
 For regular use, copy or link `decision-policy.ts` into a trusted Pi extension directory.
 
-The extension listens to Pi's `tool_call` event. It evaluates only consequential actions by default. A model result of `block` blocks the call. A result of `review` opens Pi's confirmation UI. In non-UI sessions, `review` blocks because no human confirmation is available.
+The extension listens to Pi's `tool_call` event and calls `mcp__decision_models__decision_action_policy` through Pi's `ctx.executeTool()` API. The `direct` exposure above makes Pi wait for the server before the first prompt and keeps the policy tool callable. It evaluates only consequential actions by default. A model result of `block` blocks the call. A result of `review` opens Pi's confirmation UI. In non-UI sessions, `review` blocks because no human confirmation is available.
 
 Provider failures fail open to Pi's normal permission behavior so a local model outage does not make the coding agent unusable.
 
-The extension imports the built `dist/action-policy.js`, so rerun `pnpm run build` after changing the policy implementation.
+Nested MCP calls pass through Pi's normal tool pipeline. The extension skips calls whose name starts with `mcp__decision_models__` to prevent recursive policy evaluation.
