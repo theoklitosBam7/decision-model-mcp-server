@@ -1,17 +1,59 @@
-import type {
-  ExtensionAPI,
-  ToolCallEventResult,
-} from "@earendil-works/pi-coding-agent";
+type ToolCallEvent = {
+  toolName: string;
+  input: unknown;
+};
 
-import { evaluateActionPolicy, isDecisionModelTool } from "../../dist/action-policy.js";
+type ToolCallEventResult = {
+  block?: boolean;
+  reason?: string;
+};
 
-export default function decisionPolicy(pi: ExtensionAPI) {
-  pi.on("tool_call", async (event, ctx): Promise<ToolCallEventResult | void> => {
-    if (isDecisionModelTool(event.toolName)) return;
+type ToolCallContext = {
+  hasUI: boolean;
+  ui: {
+    notify(message: string, level: "warning"): void;
+    confirm(title: string, message: string): Promise<boolean>;
+  };
+};
 
-    let result;
+type PiExtensionApi = {
+  on(
+    event: "tool_call",
+    handler: (
+      event: ToolCallEvent,
+      ctx: ToolCallContext,
+    ) => Promise<ToolCallEventResult | void>,
+  ): void;
+};
+
+type ActionPolicyResult = {
+  action: "allow" | "review" | "block";
+  reasons: string[];
+  evaluated: boolean;
+};
+
+type ActionPolicyModule = {
+  evaluateActionPolicy(request: {
+    toolName: string;
+    toolInput: unknown;
+  }): Promise<ActionPolicyResult>;
+  isDecisionModelTool(toolName: string): boolean;
+};
+
+const POLICY_MODULE = "../../dist/action-policy.js";
+
+async function loadPolicy(): Promise<ActionPolicyModule> {
+  return (await import(POLICY_MODULE)) as ActionPolicyModule;
+}
+
+export default function decisionPolicy(pi: PiExtensionApi) {
+  pi.on("tool_call", async (event, ctx) => {
+    const policy = await loadPolicy();
+    if (policy.isDecisionModelTool(event.toolName)) return;
+
+    let result: ActionPolicyResult;
     try {
-      result = await evaluateActionPolicy({
+      result = await policy.evaluateActionPolicy({
         toolName: event.toolName,
         toolInput: event.input,
       });
