@@ -1,5 +1,7 @@
 # Pi integration
 
+Compatibility target: Pi v1.0.3, the latest stable release on October 5, 2026.
+
 This integration targets the current Pi extension and MCP APIs.
 
 ## Prerequisites
