@@ -22,14 +22,11 @@ export type ActionPolicyResult = {
 
 type DecideFn = (request: DecisionRequest) => Promise<DecisionResponse>;
 
-const MUTATING_TOOL_NAME =
-  /(?:^|__|_)(?:create|update|delete|remove|write|edit|execute|apply|deploy|merge|send|publish|archive|close|approve|destroy)(?:$|__|_)/i;
+const MUTATING_TOOL_NAME = /(?:^|__|_)(?:create|update|delete|remove|write|edit|execute|apply|deploy|merge|send|publish|archive|close|approve|destroy)(?:$|__|_)/i;
 
-const CONSEQUENTIAL_COMMAND =
-  /(?:^|[\s;&|])(?:sudo\b|rm\b|rmdir\b|chmod\b|chown\b|kill\b|pkill\b|ssh\b|scp\b|rsync\b|terraform\s+(?:apply|destroy|import|state|taint)\b|kubectl\s+(?:apply|delete|patch|replace|scale|rollout|exec)\b|docker\s+(?:push|rm|rmi|system\s+prune)\b|git\s+(?:push|reset\s+--hard|clean\b|branch\s+-D|checkout\s+--)\b|(?:npm|pnpm|yarn)\s+publish\b|(?:DROP|TRUNCATE|ALTER)\s+(?:TABLE|DATABASE)\b|DELETE\s+FROM\b|curl\b[^\n]*(?:-X|--request)\s*(?:POST|PUT|PATCH|DELETE)\b)/i;
+const CONSEQUENTIAL_COMMAND = /(?:^|[\s;&|])(?:sudo\b|rm\b|rmdir\b|chmod\b|chown\b|kill\b|pkill\b|ssh\b|scp\b|rsync\b|terraform\s+(?:apply|destroy|import|state|taint)\b|kubectl\s+(?:apply|delete|patch|replace|scale|rollout|exec)\b|docker\s+(?:push|rm|rmi|system\s+prune)\b|git\s+(?:push|reset\s+--hard|clean\b|branch\s+-D|checkout\s+--)\b|(?:npm|pnpm|yarn)\s+publish\b|(?:DROP|TRUNCATE|ALTER)\s+(?:TABLE|DATABASE)\b|DELETE\s+FROM\b|curl\b[^\n]*(?:-X|--request)\s*(?:POST|PUT|PATCH|DELETE)\b)/i;
 
-const SENSITIVE_EDIT =
-  /(?:^|[\\/])(?:\.env(?:\.|$)|\.github[\\/]workflows[\\/]|Dockerfile|package\.json|pnpm-lock\.yaml|[^\\/]*(?:auth|security|permission|policy|secret)[^\\/]*|(?:infra|terraform|k8s|kubernetes|migrations?|schema)[\\/])/i;
+const SENSITIVE_EDIT = /(?:^|[\\/])(?:\.env(?:\.|$)|\.github[\\/]workflows[\\/]|Dockerfile|package\.json|pnpm-lock\.yaml|[^\\/]*(?:auth|security|permission|policy|secret)[^\\/]*|(?:infra|terraform|k8s|kubernetes|migrations?|schema)[\\/])/i;
 
 export const actionPolicyQuestions = {
   risk: {
