@@ -22,11 +22,14 @@ export type ActionPolicyResult = {
 
 type DecideFn = (request: DecisionRequest) => Promise<DecisionResponse>;
 
-const MUTATING_TOOL_NAME = /(?:^|__|_)(?:create|update|delete|remove|write|edit|execute|apply|deploy|merge|send|publish|archive|close|approve|destroy)(?:$|__|_)/i;
+const MUTATING_TOOL_NAME =
+  /(?:^|__|_)(?:create|update|delete|remove|write|edit|execute|apply|deploy|merge|send|publish|archive|close|approve|destroy)(?:$|__|_)/i;
 
-const CONSEQUENTIAL_COMMAND = /(?:^|[\s;&|])(?:sudo\b|rm\b|rmdir\b|chmod\b|chown\b|kill\b|pkill\b|ssh\b|scp\b|rsync\b|terraform\s+(?:apply|destroy|import|state|taint)\b|kubectl\s+(?:apply|delete|patch|replace|scale|rollout|exec)\b|docker\s+(?:push|rm|rmi|system\s+prune)\b|git\s+(?:push|reset\s+--hard|clean\b|branch\s+-D|checkout\s+--)\b|(?:npm|pnpm|yarn)\s+publish\b|(?:DROP|TRUNCATE|ALTER)\s+(?:TABLE|DATABASE)\b|DELETE\s+FROM\b|curl\b[^\n]*(?:-X|--request)\s*(?:POST|PUT|PATCH|DELETE)\b)/i;
+const CONSEQUENTIAL_COMMAND =
+  /(?:^|[\s;&|])(?:sudo\b|rm\b|rmdir\b|chmod\b|chown\b|kill\b|pkill\b|ssh\b|scp\b|rsync\b|terraform\s+(?:apply|destroy|import|state|taint)\b|kubectl\s+(?:apply|delete|patch|replace|scale|rollout|exec)\b|docker\s+(?:push|rm|rmi|system\s+prune)\b|git\s+(?:push|reset\s+--hard|clean\b|branch\s+-D|checkout\s+--)\b|(?:npm|pnpm|yarn)\s+publish\b|(?:DROP|TRUNCATE|ALTER)\s+(?:TABLE|DATABASE)\b|DELETE\s+FROM\b|curl\b[^\n]*(?:-X|--request)\s*(?:POST|PUT|PATCH|DELETE)\b)/i;
 
-const SENSITIVE_EDIT = /(?:^|[\\/])(?:\.env(?:\.|$)|\.github[\\/]workflows[\\/]|Dockerfile|package\.json|pnpm-lock\.yaml|[^\\/]*(?:auth|security|permission|policy|secret)[^\\/]*|(?:infra|terraform|k8s|kubernetes|migrations?|schema)[\\/])/i;
+const SENSITIVE_EDIT =
+  /(?:^|[\\/])(?:\.env(?:\.|$)|\.github[\\/]workflows[\\/]|Dockerfile|package\.json|pnpm-lock\.yaml|[^\\/]*(?:auth|security|permission|policy|secret)[^\\/]*|(?:infra|terraform|k8s|kubernetes|migrations?|schema)[\\/])/i;
 
 export const actionPolicyQuestions = {
   risk: {
@@ -35,17 +38,20 @@ export const actionPolicyQuestions = {
       "Classify the proposed engineering tool call. Choose routine for a normal reversible development action, review when meaningful side effects or uncertainty warrant human review, and block only when the action is clearly dangerous, destructive, credential-sensitive, or likely to mutate production without adequate safety context.",
     criteria: {
       routine: "Normal, scoped, and readily reversible development action.",
-      review: "Meaningful side effect, elevated risk, or uncertainty that warrants review before execution.",
+      review:
+        "Meaningful side effect, elevated risk, or uncertainty that warrants review before execution.",
       block: "Clearly dangerous or destructive action that should not execute as proposed.",
     },
   },
   destructive: {
     type: "noul" as const,
-    instructions: "Could this tool call delete, overwrite, corrupt, or materially disrupt important state?",
+    instructions:
+      "Could this tool call delete, overwrite, corrupt, or materially disrupt important state?",
   },
   production: {
     type: "noul" as const,
-    instructions: "Does this tool call appear to target production, shared infrastructure, or a live remote service?",
+    instructions:
+      "Does this tool call appear to target production, shared infrastructure, or a live remote service?",
   },
   irreversible: {
     type: "noul" as const,
