@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "test": "tsx --test test/*.test.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p integrations/pi/tsconfig.json && tsc --noEmit -p test/tsconfig.json",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "inspect": "pnx @modelcontextprotocol/inspector@2.9.0 --protocol-era auto pnpm exec tsx src/index.ts",
@@ -21,6 +21,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.0.4",
     "@types/node": "^24.19.0",
     "oxfmt": "^0.71.0",
     "oxlint": "^1.86.0",

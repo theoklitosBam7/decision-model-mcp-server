@@ -1,27 +1,12 @@
-type ToolCallEvent = {
-  toolName: string;
-  input: unknown;
-};
+import { dirname, isAbsolute, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-type ToolCallEventResult = {
-  block?: boolean;
-  reason?: string;
-};
-
-type ToolCallContext = {
-  hasUI: boolean;
-  ui: {
-    notify(message: string, level: "warning"): void;
-    confirm(title: string, message: string): Promise<boolean>;
-  };
-};
-
-type PiExtensionApi = {
-  on(
-    event: "tool_call",
-    handler: (event: ToolCallEvent, ctx: ToolCallContext) => Promise<ToolCallEventResult | void>,
-  ): void;
-};
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+  ToolCallEvent,
+  ToolCallEventResult,
+} from "@earendil-works/pi-coding-agent";
 
 type ActionPolicyResult = {
   action: "allow" | "review" | "block";
@@ -37,19 +22,45 @@ type ActionPolicyModule = {
   isDecisionModelTool(toolName: string): boolean;
 };
 
-const POLICY_MODULE = "../../dist/action-policy.js";
+export const ACTION_POLICY_MODULE_ENV = "DECISION_ACTION_POLICY_MODULE";
 
-async function loadPolicy(): Promise<ActionPolicyModule> {
-  return (await import(POLICY_MODULE)) as ActionPolicyModule;
+export type DecisionPolicyExtensionOptions = {
+  loadPolicy?: () => Promise<ActionPolicyModule>;
+  env?: NodeJS.ProcessEnv;
+  extensionModuleUrl?: string | URL;
+};
+
+export function resolveActionPolicyModuleHref(
+  options: Pick<DecisionPolicyExtensionOptions, "env" | "extensionModuleUrl"> = {},
+): string {
+  const env = options.env ?? process.env;
+  const configured = env[ACTION_POLICY_MODULE_ENV]?.trim();
+  if (configured) {
+    const absolute = isAbsolute(configured) ? configured : resolve(configured);
+    return pathToFileURL(absolute).href;
+  }
+
+  const extensionModuleUrl = options.extensionModuleUrl ?? import.meta.url;
+  const extensionDir = dirname(fileURLToPath(extensionModuleUrl));
+  return pathToFileURL(resolve(extensionDir, "../../dist/action-policy.js")).href;
 }
 
-export default function decisionPolicy(pi: PiExtensionApi) {
-  pi.on("tool_call", async (event, ctx) => {
-    const policy = await loadPolicy();
-    if (policy.isDecisionModelTool(event.toolName)) return;
+async function importActionPolicyModule(
+  options: Pick<DecisionPolicyExtensionOptions, "env" | "extensionModuleUrl"> = {},
+): Promise<ActionPolicyModule> {
+  const href = resolveActionPolicyModuleHref(options);
+  return (await import(href)) as ActionPolicyModule;
+}
 
+export function decisionPolicy(pi: ExtensionAPI, options: DecisionPolicyExtensionOptions = {}) {
+  const loadPolicy = options.loadPolicy ?? (() => importActionPolicyModule(options));
+
+  pi.on("tool_call", async (event: ToolCallEvent, ctx: ExtensionContext) => {
     let result: ActionPolicyResult;
     try {
+      const policy = await loadPolicy();
+      if (policy.isDecisionModelTool(event.toolName)) return;
+
       result = await policy.evaluateActionPolicy({
         toolName: event.toolName,
         toolInput: event.input,
@@ -72,14 +83,14 @@ export default function decisionPolicy(pi: PiExtensionApi) {
       return {
         block: true,
         reason: `Decision model policy blocked this tool call: ${reason}`,
-      };
+      } satisfies ToolCallEventResult;
     }
 
     if (!ctx.hasUI) {
       return {
         block: true,
         reason: `Decision model policy requires review, but this Pi session has no approval UI: ${reason}`,
-      };
+      } satisfies ToolCallEventResult;
     }
 
     const approved = await ctx.ui.confirm(
@@ -91,7 +102,11 @@ export default function decisionPolicy(pi: PiExtensionApi) {
       return {
         block: true,
         reason: `Tool call rejected after decision-model review: ${reason}`,
-      };
+      } satisfies ToolCallEventResult;
     }
   });
+}
+
+export default function decisionPolicyExtension(pi: ExtensionAPI) {
+  decisionPolicy(pi);
 }

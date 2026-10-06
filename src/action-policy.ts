@@ -25,8 +25,13 @@ type DecideFn = (request: DecisionRequest) => Promise<DecisionResponse>;
 const MUTATING_TOOL_NAME =
   /(?:^|__|_)(?:create|update|delete|remove|write|edit|execute|apply|deploy|merge|send|publish|archive|close|approve|destroy)(?:$|__|_)/i;
 
+const CURL_MUTATING_OPTION =
+  /(?:-(?:X|[dFT])\b|--(?:request|data(?:-raw|-binary|-urlencode)?|form(?:-string)?|upload-file|json)\b)/i;
+
+const CURL_MUTATING_METHOD = /(?:POST|PUT|PATCH|DELETE)\b/i;
+
 const CONSEQUENTIAL_COMMAND =
-  /(?:^|[\s;&|])(?:sudo\b|rm\b|rmdir\b|chmod\b|chown\b|kill\b|pkill\b|ssh\b|scp\b|rsync\b|terraform\s+(?:apply|destroy|import|state|taint)\b|kubectl\s+(?:apply|delete|patch|replace|scale|rollout|exec)\b|docker\s+(?:push|rm|rmi|system\s+prune)\b|git\s+(?:push|reset\s+--hard|clean\b|branch\s+-D|checkout\s+--)\b|(?:npm|pnpm|yarn)\s+publish\b|(?:DROP|TRUNCATE|ALTER)\s+(?:TABLE|DATABASE)\b|DELETE\s+FROM\b|curl\b[^\n]*(?:-X|--request)\s*(?:POST|PUT|PATCH|DELETE)\b)/i;
+  /(?:^|[\s;&|])(?:sudo\b|rm\b|rmdir\b|chmod\b|chown\b|kill\b|pkill\b|ssh\b|scp\b|rsync\b|terraform\s+(?:apply|destroy|import|state|taint)\b|kubectl\s+(?:apply|delete|patch|replace|scale|rollout|exec)\b|docker\s+(?:push|rm|rmi|system\s+prune)\b|git\s+(?:push|reset\s+--hard|clean\b|branch\s+-D|checkout\s+--)\b|(?:npm|pnpm|yarn)\s+publish\b|(?:DROP|TRUNCATE|ALTER)\s+(?:TABLE|DATABASE)\b|DELETE\s+FROM\b)/i;
 
 const SENSITIVE_EDIT =
   /(?:^|[\\/])(?:\.env(?:\.|$)|\.github[\\/]workflows[\\/]|Dockerfile|package\.json|pnpm-lock\.yaml|[^\\/]*(?:auth|security|permission|policy|secret)[^\\/]*|(?:infra|terraform|k8s|kubernetes|migrations?|schema)[\\/])/i;
@@ -89,6 +94,23 @@ function inputText(value: JsonValue): string {
   return JSON.stringify(value);
 }
 
+function isMutatingCurl(command: string): boolean {
+  if (!/\bcurl\b/i.test(command)) return false;
+  if (!CURL_MUTATING_OPTION.test(command)) return false;
+
+  // Explicit safe methods stay out of the consequential set even when -X is present.
+  const methodMatch = command.match(/(?:^|[\s])(?:-X|--request)\s*([A-Za-z]+)/i);
+  if (methodMatch) {
+    return CURL_MUTATING_METHOD.test(methodMatch[1] ?? "");
+  }
+
+  return true;
+}
+
+function isConsequentialCommand(command: string): boolean {
+  return isMutatingCurl(command) || CONSEQUENTIAL_COMMAND.test(command);
+}
+
 export function isDecisionModelTool(toolName: string): boolean {
   const normalized = toolName.toLowerCase();
   return normalized.includes("decision-models") || normalized.includes("decision_models");
@@ -112,7 +134,7 @@ export function shouldEvaluateAction(
     normalized.endsWith("__powershell") ||
     normalized.includes("exec")
   ) {
-    return CONSEQUENTIAL_COMMAND.test(text);
+    return isConsequentialCommand(text);
   }
 
   if (

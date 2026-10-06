@@ -16,6 +16,44 @@ void test("consequential scope evaluates destructive shell commands", () => {
   assert.equal(shouldEvaluateAction("Bash", { command: "git reset --hard HEAD~1" }), true);
 });
 
+void test("consequential scope evaluates curl requests that imply POST via data flags", () => {
+  assert.equal(
+    shouldEvaluateAction("Bash", {
+      command: `curl https://api.example.com/users -d '{"admin":true}'`,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldEvaluateAction("Bash", {
+      command: "curl https://api.example.com/upload -F file=@data.txt",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldEvaluateAction("Bash", {
+      command: "curl https://api.example.com/upload --upload-file data.bin",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldEvaluateAction("Bash", {
+      command: `curl https://api.example.com/users --json '{"admin":true}'`,
+    }),
+    true,
+  );
+});
+
+void test("consequential scope skips plain curl reads without mutating options", () => {
+  assert.equal(
+    shouldEvaluateAction("Bash", { command: "curl https://api.example.com/users" }),
+    false,
+  );
+  assert.equal(
+    shouldEvaluateAction("Bash", { command: "curl -X GET https://api.example.com/users" }),
+    false,
+  );
+});
+
 void test("consequential scope evaluates sensitive edits", () => {
   assert.equal(
     shouldEvaluateAction("apply_patch", {
