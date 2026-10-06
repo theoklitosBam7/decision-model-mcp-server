@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { access } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -36,23 +35,22 @@ function captureToolCallHandler(register: (pi: ExtensionAPI) => void): ToolCallH
   return toolCallHandler!;
 }
 
+const testDir = dirname(fileURLToPath(import.meta.url));
+
 const repoExtensionUrl = pathToFileURL(
-  resolve(dirname(fileURLToPath(import.meta.url)), "../integrations/pi/decision-policy.ts"),
+  resolve(testDir, "../integrations/pi/decision-policy.ts"),
 ).href;
 
-const builtPolicyPath = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../dist/action-policy.js",
-);
+const builtPolicyPath = resolve(testDir, "../dist/action-policy.js");
+const fixturePolicyPath = resolve(testDir, "fixtures/action-policy-stub.js");
 
-void test("repo extension path resolves to the built action-policy module", async () => {
+void test("repo extension path resolves to the built action-policy module", () => {
   const href = resolveActionPolicyModuleHref({
     env: {},
     extensionModuleUrl: repoExtensionUrl,
   });
 
   assert.equal(href, pathToFileURL(builtPolicyPath).href);
-  await access(fileURLToPath(href));
 });
 
 void test("copied extension without override points outside the repository build", () => {
@@ -178,27 +176,37 @@ void test("Pi extension blocks when the policy returns block", async () => {
   });
 });
 
-void test("Pi extension loads the built policy module from the documented repo path", async () => {
+void test("Pi extension dynamically imports a policy module from DECISION_ACTION_POLICY_MODULE", async () => {
+  const notifications: Array<{ message: string; level?: string }> = [];
   const toolCallHandler = captureToolCallHandler((pi) => {
     decisionPolicy(pi, {
-      env: {},
-      extensionModuleUrl: repoExtensionUrl,
+      env: {
+        [ACTION_POLICY_MODULE_ENV]: fixturePolicyPath,
+      },
+      // Simulate a copied extension path; the env override must win.
+      extensionModuleUrl: pathToFileURL(resolve("/tmp/pi-extensions/decision-policy.ts")).href,
     });
   });
 
   const result = await toolCallHandler(
     {
       toolName: "bash",
-      input: { command: "git status" },
+      input: { command: "rm -rf /tmp/demo" },
     },
     {
-      hasUI: false,
+      hasUI: true,
       ui: {
-        notify() {},
-        confirm: async () => false,
+        notify(message, level) {
+          notifications.push({ message, level });
+        },
+        confirm: async () => true,
       },
     },
   );
 
-  assert.equal(result, undefined);
+  assert.deepEqual(result, {
+    block: true,
+    reason: "Decision model policy blocked this tool call: fixture blocked bash",
+  });
+  assert.equal(notifications.length, 0);
 });
