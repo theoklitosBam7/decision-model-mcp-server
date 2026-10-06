@@ -1,0 +1,25 @@
+{
+  "description": "Use the decision-models MCP server to review consequential Codex tool calls.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|apply_patch|Edit|Write)$",
+        "hooks": [
+          {
+            "type": "mcp_tool",
+            "server": "decision-models",
+            "tool": "decision_action_policy",
+            "input": {
+              "tool_name": "${tool_name}",
+              "tool_input": "${tool_input}",
+              "scope": "consequential",
+              "output": "codex_pre_tool_use"
+            },
+            "timeout": 30,
+            "statusMessage": "Checking decision policy"
+          }
+        ]
+      }
+    ]
+  }
+}

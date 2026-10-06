@@ -153,6 +153,16 @@ export const batchInputSchema = z
   })
   .refine(withinPayloadLimit, { message: "Request payload is too large." });
 
+export const actionPolicyInputSchema = z
+  .object({
+    ...providerFields,
+    tool_name: z.string().min(1).max(256),
+    tool_input: jsonValueSchema,
+    scope: z.enum(["consequential", "all"]).default("consequential"),
+    output: z.enum(["result", "codex_pre_tool_use"]).default("result"),
+  })
+  .refine(withinPayloadLimit, { message: "Action policy payload is too large." });
+
 export const gateInputSchema = z
   .object({
     answers: z
