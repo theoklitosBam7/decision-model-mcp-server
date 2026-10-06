@@ -54,6 +54,30 @@ void test("consequential scope skips plain curl reads without mutating options",
   );
 });
 
+void test("consequential scope evaluates a mutating curl after a safe curl in one shell command", () => {
+  assert.equal(
+    shouldEvaluateAction("Bash", {
+      command:
+        `curl -X GET https://example.com/status; ` +
+        `curl https://api.example.com/users -d '{"admin":true}'`,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldEvaluateAction("Bash", {
+      command:
+        "curl -X GET https://example.com/status && curl https://api.example.com/upload -F file=@data.txt",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldEvaluateAction("Bash", {
+      command: "curl -X GET https://example.com/a; curl -X GET https://example.com/b",
+    }),
+    false,
+  );
+});
+
 void test("consequential scope evaluates sensitive edits", () => {
   assert.equal(
     shouldEvaluateAction("apply_patch", {

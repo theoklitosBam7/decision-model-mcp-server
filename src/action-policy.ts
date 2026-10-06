@@ -94,17 +94,44 @@ function inputText(value: JsonValue): string {
   return JSON.stringify(value);
 }
 
-function isMutatingCurl(command: string): boolean {
-  if (!/\bcurl\b/i.test(command)) return false;
-  if (!CURL_MUTATING_OPTION.test(command)) return false;
+function shellSegments(command: string): string[] {
+  return command
+    .split(/(?:\r?\n|&&|\|\||;|(?<![|&])[|&](?![|&]))/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
+function curlInvocations(segment: string): string[] {
+  const starts = [...segment.matchAll(/\bcurl\b/gi)];
+  if (starts.length === 0) return [];
+
+  return starts.map((match, index) => {
+    const start = match.index ?? 0;
+    const end =
+      index + 1 < starts.length ? (starts[index + 1]?.index ?? segment.length) : segment.length;
+    return segment.slice(start, end);
+  });
+}
+
+function isMutatingCurlInvocation(invocation: string): boolean {
+  if (!CURL_MUTATING_OPTION.test(invocation)) return false;
 
   // Explicit safe methods stay out of the consequential set even when -X is present.
-  const methodMatch = command.match(/(?:^|[\s])(?:-X|--request)\s*([A-Za-z]+)/i);
+  const methodMatch = invocation.match(/(?:^|[\s])(?:-X|--request)(?:\s+|=)?([A-Za-z]+)/i);
   if (methodMatch) {
     return CURL_MUTATING_METHOD.test(methodMatch[1] ?? "");
   }
 
   return true;
+}
+
+function isMutatingCurl(command: string): boolean {
+  for (const segment of shellSegments(command)) {
+    for (const invocation of curlInvocations(segment)) {
+      if (isMutatingCurlInvocation(invocation)) return true;
+    }
+  }
+  return false;
 }
 
 function isConsequentialCommand(command: string): boolean {
