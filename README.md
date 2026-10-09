@@ -24,6 +24,19 @@ To add a provider, implement `DecisionProvider` in `src/providers/` and register
 
 Model-facing tools accept optional `provider` and `model` parameters. Set `DECISION_ALLOWED_PROVIDERS` to a comma-separated allowlist when per-call provider switching is required.
 
+## Use cases
+
+Use this server when an MCP host or coding agent needs a structured decision rather than an open-ended text response:
+
+- **Route incoming requests:** Use `decision_classify` to assign support tickets, tasks, or messages to one of several labels.
+- **Choose a workflow:** Use `decision_decide` to evaluate named questions about a task, such as whether to handle it directly or send it for review.
+- **Score options:** Use `decision_score` to rate a state against an ordered rubric, such as task complexity or urgency.
+- **Evaluate items in a batch:** Use `decision_batch` to apply the same questions across multiple states.
+- **Review proposed tool calls:** Use `decision_action_policy` to assess consequential coding-agent actions and return an advisory `allow`, `review`, or `block` result. The included Codex and Pi integrations show how to use it in agent workflows.
+- **Apply a local decision policy:** Use `decision_gate` to combine caller-supplied answers into an advisory `allow`, `review`, or `block` result without another model call.
+
+Policy outputs are advisory, not an authorization boundary. Keep your MCP host's native permissions, confirmation steps, and sandbox controls enabled.
+
 ## Requirements
 
 - Node.js 20+
